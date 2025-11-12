@@ -1,0 +1,7 @@
+.consent-banner{border:1px solid #e6e9ef;padding:12px;border-radius:8px;margin-bottom:12px;background:#fbfdff}
+.consent-banner h3{margin:0 0 8px}
+.consent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.consent-item{background:#fff;padding:8px;border-radius:6px;border:1px solid #eef2f6;display:flex;flex-direction:column;align-items:flex-start}
+.consent-item .label{font-weight:600;margin-bottom:6px}
+.consent-item .status{font-size:12px;color:#666;margin-bottom:6px}
+.consent-item button{align-self:stretch;padding:6px 8px;border-radius:6px;border:1px solid #cbd5e1;background:#f8fafc;cursor:pointer}

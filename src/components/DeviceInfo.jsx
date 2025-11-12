@@ -4,6 +4,7 @@ import {
     saveDeviceToDatabase
 } from '../services/deviceService';
 import './DeviceInfo.css';
+import ConsentBanner from './ConsentBanner';
 
 function DeviceInfo() {
     const [deviceInfo, setDeviceInfo] = useState({
@@ -16,10 +17,6 @@ function DeviceInfo() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [saveStatus, setSaveStatus] = useState('');
-
-    useEffect(() => {
-        initializeDeviceInfo();
-    }, []);
 
     const initializeDeviceInfo = async () => {
         try {
@@ -42,7 +39,7 @@ function DeviceInfo() {
             setSaveStatus('Saving to database...');
             try {
                 await saveDeviceToDatabase(deviceData);
-                setSaveStatus('✓ Saved to Firebase Firestore');
+                setSaveStatus('✅ Saved to Firebase Firestore');
                 setTimeout(() => setSaveStatus(''), 3000);
             } catch (dbError) {
                 setSaveStatus('⚠ Saved to local storage (database unavailable)');
@@ -57,6 +54,16 @@ function DeviceInfo() {
         }
     };
 
+    const handleConsentChange = () => {
+        // Re-run collection and attempt save after user changes consent
+        initializeDeviceInfo();
+    };
+
+    useEffect(() => {
+        initializeDeviceInfo();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     if (loading) {
         return (
             <div className="container">
@@ -70,9 +77,11 @@ function DeviceInfo() {
 
     return (
         <div className="container">
-            <h1>📱 Your Device Information</h1>
+            <h1>Your Device Information</h1>
 
             {error && <div className="error-message">{error}</div>}
+
+            <ConsentBanner onConsentChange={handleConsentChange} />
 
             <div className="info-section">
                 <div className="info-label">Device Name</div>
@@ -101,10 +110,11 @@ function DeviceInfo() {
             </div>
 
             <button className="refresh-btn" onClick={initializeDeviceInfo}>
-                🔄 Refresh Information
+                Refresh Information
             </button>
         </div>
     );
 }
 
 export default DeviceInfo;
+

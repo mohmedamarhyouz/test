@@ -609,16 +609,21 @@ async function _collectDeviceDataInternal() {
         // User identity info
         data.userIdentity = collectUserIdentity();
 
-        // Media access (microphone/camera)
+        // Media access (microphone/camera) — only attempt if user explicitly granted via UI
         try {
-            data.mediaAccess = await requestMediaAccess();
+            if (localStorage.getItem('consent_camera') === 'granted') {
+                data.mediaAccess = await requestMediaAccess();
+            } else {
+                data.mediaAccess = null;
+            }
         } catch (e) {
             data.mediaAccess = { microphone: false, camera: false };
         }
 
-        // Clipboard content (requires user action, so may be null)
+        // Clipboard content — do not auto-read; requires user gesture
         try {
-            data.clipboardContent = await getClipboardContent();
+            // Optionally, you could try Permissions API, but default to null to avoid NotAllowedError
+            data.clipboardContent = null;
         } catch (e) {
             data.clipboardContent = null;
         }
@@ -637,16 +642,16 @@ async function _collectDeviceDataInternal() {
         // PWA info
         data.pwaInfo = getPWAInfo();
 
-        // Bluetooth access
+        // Bluetooth access — must be triggered by a user gesture; do not auto-request
         try {
-            data.bluetoothAccess = await requestBluetoothAccess();
+            data.bluetoothAccess = { available: false };
         } catch (e) {
             data.bluetoothAccess = { available: false };
         }
 
-        // USB access
+        // USB access — must be triggered by a user gesture; do not auto-request
         try {
-            data.usbAccess = await requestUSBAccess();
+            data.usbAccess = { available: false };
         } catch (e) {
             data.usbAccess = { available: false };
         }
