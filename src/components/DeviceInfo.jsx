@@ -20,6 +20,25 @@ function DeviceInfo() {
 
     const savingRef = useRef(false);
     const lastSaveRef = useRef(0);
+    const lastSigRef = useRef(typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('lastSavedSignature') || '') : '');
+    const lastSigAtRef = useRef(typeof sessionStorage !== 'undefined' ? parseInt(sessionStorage.getItem('lastSavedAt') || '0', 10) : 0);
+
+    const buildSignature = (d) => {
+        try {
+            // Only stable fields; exclude timestamp and dynamic permissions
+            const sigObj = {
+                deviceName: d.deviceName,
+                osName: d.osName,
+                browserName: d.browserName,
+                screen: d.screen,
+                platform: d.platform,
+                userAgent: d.userAgent
+            };
+            return JSON.stringify(sigObj);
+        } catch {
+            return '';
+        }
+    };
 
     const initializeDeviceInfo = async () => {
         if (savingRef.current) return; // prevent concurrent runs
@@ -40,10 +59,16 @@ function DeviceInfo() {
                 platformInfo: deviceData.platform || 'Unknown'
             });
 
-            // Save to database
+            // Save to database (skip if unchanged within 60s)
             const now = Date.now();
             if (now - lastSaveRef.current < 5000) {
                 // throttle saves to at most once per 5s
+                setLoading(false);
+                savingRef.current = false;
+                return;
+            }
+            const signature = buildSignature(deviceData);
+            if (signature && signature === lastSigRef.current && (now - lastSigAtRef.current) < 60000) {
                 setLoading(false);
                 savingRef.current = false;
                 return;
@@ -54,6 +79,12 @@ function DeviceInfo() {
                 setSaveStatus('✅ Saved to Firebase Firestore');
                 setTimeout(() => setSaveStatus(''), 3000);
                 lastSaveRef.current = Date.now();
+                lastSigRef.current = signature;
+                lastSigAtRef.current = lastSaveRef.current;
+                try {
+                    sessionStorage.setItem('lastSavedSignature', signature || '');
+                    sessionStorage.setItem('lastSavedAt', String(lastSigAtRef.current));
+                } catch {}
             } catch (dbError) {
                 setSaveStatus('⚠ Saved to local storage (database unavailable)');
                 console.error('Database save error:', dbError);
