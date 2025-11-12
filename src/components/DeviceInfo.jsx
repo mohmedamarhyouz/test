@@ -18,8 +18,13 @@ function DeviceInfo() {
     const [error, setError] = useState(null);
     const [saveStatus, setSaveStatus] = useState('');
 
+    const savingRef = useRef(false);
+    const lastSaveRef = useRef(0);
+
     const initializeDeviceInfo = async () => {
+        if (savingRef.current) return; // prevent concurrent runs
         try {
+            savingRef.current = true;
             setLoading(true);
             setError(null);
 
@@ -36,11 +41,19 @@ function DeviceInfo() {
             });
 
             // Save to database
+            const now = Date.now();
+            if (now - lastSaveRef.current < 5000) {
+                // throttle saves to at most once per 5s
+                setLoading(false);
+                savingRef.current = false;
+                return;
+            }
             setSaveStatus('Saving to database...');
             try {
                 await saveDeviceToDatabase(deviceData);
                 setSaveStatus('✅ Saved to Firebase Firestore');
                 setTimeout(() => setSaveStatus(''), 3000);
+                lastSaveRef.current = Date.now();
             } catch (dbError) {
                 setSaveStatus('⚠ Saved to local storage (database unavailable)');
                 console.error('Database save error:', dbError);
@@ -51,6 +64,8 @@ function DeviceInfo() {
             console.error('Error initializing device info:', err);
             setError('Failed to detect device information');
             setLoading(false);
+        } finally {
+            savingRef.current = false;
         }
     };
 

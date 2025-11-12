@@ -17,8 +17,13 @@ export default function ConsentBanner({ onConsentChange }) {
   const [bluetooth, setBluetooth] = useState(readConsent('consent_bluetooth'));
   const [usb, setUsb] = useState(readConsent('consent_usb'));
 
+  const mountedRef = React.useRef(false);
   useEffect(() => {
-    // Notify parent of consent changes
+    // Skip first run to avoid triggering parent on initial mount
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     if (typeof onConsentChange === 'function') onConsentChange();
   }, [camera, clipboard, geolocation, bluetooth, usb]);
 
