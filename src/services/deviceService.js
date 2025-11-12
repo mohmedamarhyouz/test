@@ -382,6 +382,9 @@ export async function saveDeviceToDatabase(deviceInfo) {
         // Trim payload in non-local environments to reduce size
         const payload = isLocal ? deviceInfo : trimDevicePayload(deviceInfo);
 
+        // Debug: log endpoint used
+        try { console.info('saveDeviceToDatabase →', endpoint); } catch {}
+
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -395,8 +398,11 @@ export async function saveDeviceToDatabase(deviceInfo) {
             console.log('Device saved successfully:', result);
             return result;
         } else {
-            console.error('Failed to save device:', response.statusText);
-            throw new Error('Failed to save device');
+            let errorText = '';
+            try { errorText = await response.text(); } catch {}
+            const msg = `Failed to save device: HTTP ${response.status} ${response.statusText}${errorText ? ' — ' + errorText.slice(0,200) : ''}`;
+            console.error(msg);
+            throw new Error(msg);
         }
     } catch (error) {
         console.warn('Could not connect to database. Using local storage instead.', error);
