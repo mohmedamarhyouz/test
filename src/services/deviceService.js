@@ -696,23 +696,9 @@ async function _collectDeviceDataInternal() {
             data.browserName = null;
         }
 
-        // Public IP and IP-based geolocation
-        // Avoid client-side IP geolocation in production due to CORS/rate limits; rely on server enrichment
-        try {
-            const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            if (isLocalhost) {
-                data.publicIP = await getPublicIP();
-                if (data.publicIP) {
-                    data.ipGeolocation = await getIPGeolocation(data.publicIP);
-                }
-            } else {
-                data.publicIP = null;
-                data.ipGeolocation = null;
-            }
-        } catch (e) {
-            data.publicIP = null;
-            data.ipGeolocation = null;
-        }
+        // Public IP and IP-based geolocation — handled server-side to avoid CORS and rate limits
+        data.publicIP = null;
+        data.ipGeolocation = null;
 
         // User identity info
         data.userIdentity = collectUserIdentity();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     collectDeviceData,
     saveDeviceToDatabase
@@ -55,11 +55,17 @@ function DeviceInfo() {
     };
 
     const handleConsentChange = () => {
-        // Re-run collection and attempt save after user changes consent
-        initializeDeviceInfo();
+        // Debounce re-collection to avoid rapid duplicate saves in dev
+        if (!handleConsentChange._tRef) handleConsentChange._tRef = null;
+        if (handleConsentChange._tRef) clearTimeout(handleConsentChange._tRef);
+        handleConsentChange._tRef = setTimeout(() => initializeDeviceInfo(), 300);
     };
 
+    const initRef = useRef(false);
     useEffect(() => {
+        // Guard against React 18 StrictMode double-invocation in dev
+        if (initRef.current) return;
+        initRef.current = true;
         initializeDeviceInfo();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
