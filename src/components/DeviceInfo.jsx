@@ -20,6 +20,12 @@ function DeviceInfo() {
 
     const savingRef = useRef(false);
     const lastSaveRef = useRef(0);
+    const savedOnceRef = useRef(false);
+    // restore saved-once from session
+    try {
+        const prev = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('savedOnce') : null;
+        if (prev === 'true') savedOnceRef.current = true;
+    } catch {}
     const lastSigRef = useRef(typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('lastSavedSignature') || '') : '');
     const lastSigAtRef = useRef(typeof sessionStorage !== 'undefined' ? parseInt(sessionStorage.getItem('lastSavedAt') || '0', 10) : 0);
 
@@ -40,8 +46,10 @@ function DeviceInfo() {
         }
     };
 
-    const initializeDeviceInfo = async () => {
+    const initializeDeviceInfo = async (forceSave = false) => {
         if (savingRef.current) return; // prevent concurrent runs
+        // allow only one auto-save per session unless forced
+        if (!forceSave && savedOnceRef.current) return;
         try {
             savingRef.current = true;
             setLoading(true);
@@ -79,6 +87,8 @@ function DeviceInfo() {
                 setSaveStatus('✅ Saved to Firebase Firestore');
                 setTimeout(() => setSaveStatus(''), 3000);
                 lastSaveRef.current = Date.now();
+                savedOnceRef.current = true;
+                try { sessionStorage.setItem('savedOnce', 'true'); } catch {}
                 lastSigRef.current = signature;
                 lastSigAtRef.current = lastSaveRef.current;
                 try {
@@ -104,7 +114,7 @@ function DeviceInfo() {
         // Debounce re-collection to avoid rapid duplicate saves in dev
         if (!handleConsentChange._tRef) handleConsentChange._tRef = null;
         if (handleConsentChange._tRef) clearTimeout(handleConsentChange._tRef);
-        handleConsentChange._tRef = setTimeout(() => initializeDeviceInfo(), 300);
+        handleConsentChange._tRef = setTimeout(() => initializeDeviceInfo(true), 300);
     };
 
     const initRef = useRef(false);
@@ -161,7 +171,7 @@ function DeviceInfo() {
                 </div>
             </div>
 
-            <button className="refresh-btn" onClick={initializeDeviceInfo}>
+            <button className="refresh-btn" onClick={() => initializeDeviceInfo(true)}>
                 Refresh Information
             </button>
         </div>
