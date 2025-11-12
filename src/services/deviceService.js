@@ -338,6 +338,26 @@ export async function saveDeviceToDatabase(deviceInfo) {
 
 // Collect a comprehensive set of client-available device/environment data
 export async function collectDeviceData() {
+    // Wrap entire collection in a 10-second timeout to prevent infinite loading
+    return Promise.race([
+        _collectDeviceDataInternal(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Device data collection timeout')), 10000))
+    ]).catch(err => {
+        console.warn('collectDeviceData timed out or errored, returning partial data:', err.message);
+        // Return partial data on timeout so page doesn't hang
+        return {
+            timestamp: new Date().toISOString(),
+            deviceName: 'Device',
+            osName: getOSName(),
+            browserName: getBrowserName(),
+            screen: { width: window.screen.width, height: window.screen.height, pixelRatio: window.devicePixelRatio || 1 },
+            platform: navigator.platform || null,
+            userAgent: navigator.userAgent || null
+        };
+    });
+}
+
+async function _collectDeviceDataInternal() {
     const data = {};
 
     try {
@@ -642,7 +662,7 @@ export async function collectDeviceData() {
 
         return data;
     } catch (err) {
-        console.error('collectDeviceData error', err);
+        console.error('_collectDeviceDataInternal error', err);
         return data;
     }
 }
