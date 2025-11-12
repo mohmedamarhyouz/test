@@ -309,7 +309,11 @@ export function getPlatformInfo() {
 
 export async function saveDeviceToDatabase(deviceInfo) {
     try {
-        const response = await fetch('/api/devices/save', {
+        // Use environment variable for backend URL, fallback to /api for local dev
+        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        const endpoint = `${backendUrl}/api/devices/save`;
+        
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

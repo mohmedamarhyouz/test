@@ -1,0 +1,22 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[dev]
+  command = "npm run dev"
+  port = 3000
+
+# Redirect all routes to index.html for React Router / SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# API proxy for device endpoints (if backend is deployed separately)
+# Uncomment and update the target URL when you deploy your backend
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://your-backend-url/api/:splat"
+#   status = 200
+#   force = true
