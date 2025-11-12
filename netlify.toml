@@ -7,14 +7,14 @@
   command = "npm run dev"
   port = 3000
 
-# Redirect all routes to index.html for React Router / SPA
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# API to Netlify Functions (single dispatcher)
+# API to Netlify Functions (single dispatcher) — order matters: put before SPA catch-all
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Redirect all other routes to index.html for React Router / SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200

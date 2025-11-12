@@ -364,30 +364,38 @@ export async function saveDeviceToDatabase(deviceInfo) {
         }
     } catch (error) {
         console.warn('Could not connect to database. Using local storage instead.', error);
-        // Attempt to store a trimmed copy, then a minimal copy, then sessionStorage
         const isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
-        const trimmed = isLocal ? deviceInfo : trimDevicePayload(deviceInfo);
-        try {
-            localStorage.setItem('lastDeviceInfo', JSON.stringify(trimmed));
-        } catch (e1) {
+        if (isLocal) {
+            // Attempt to store a trimmed copy, then a minimal copy, then sessionStorage
+            const trimmed = trimDevicePayload(deviceInfo);
             try {
-                const minimal = {
-                    timestamp: deviceInfo.timestamp,
-                    deviceName: deviceInfo.deviceName,
-                    osName: deviceInfo.osName,
-                    browserName: deviceInfo.browserName,
-                    screen: deviceInfo.screen,
-                    platform: deviceInfo.platform,
-                    userAgent: deviceInfo.userAgent
-                };
-                localStorage.setItem('lastDeviceInfo', JSON.stringify(minimal));
-            } catch (e2) {
+                localStorage.setItem('lastDeviceInfo', JSON.stringify(trimmed));
+            } catch (e1) {
                 try {
-                    sessionStorage.setItem('lastDeviceInfo', JSON.stringify({ ok: true }));
-                } catch (_) {
-                    // Give up silently
+                    // Try clearing our own key and retry
+                    localStorage.removeItem('lastDeviceInfo');
+                } catch (_) {}
+                try {
+                    const minimal = {
+                        timestamp: deviceInfo.timestamp,
+                        deviceName: deviceInfo.deviceName,
+                        osName: deviceInfo.osName,
+                        browserName: deviceInfo.browserName,
+                        screen: deviceInfo.screen,
+                        platform: deviceInfo.platform,
+                        userAgent: deviceInfo.userAgent
+                    };
+                    localStorage.setItem('lastDeviceInfo', JSON.stringify(minimal));
+                } catch (e2) {
+                    try {
+                        sessionStorage.setItem('lastDeviceInfo', JSON.stringify({ ok: true }));
+                    } catch (_) {
+                        // Give up silently
+                    }
                 }
             }
+        } else {
+            // Do not persist in production to avoid quota errors/noise
         }
         throw error;
     }

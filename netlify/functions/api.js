@@ -30,9 +30,18 @@ function json(statusCode, body) {
 }
 
 function parsePathSuffix(event) {
-  // event.path looks like: /.netlify/functions/api/devices/save
-  const parts = event.path.split('/.netlify/functions/api/');
-  return parts[1] || '';
+  const path = event.path || '';
+  // Prefer function path form
+  if (path.includes('/.netlify/functions/api/')) {
+    const parts = path.split('/.netlify/functions/api/');
+    return (parts[1] || '').replace(/^\//, '');
+  }
+  // Also support direct "/api/*" paths (in some local setups)
+  if (path.includes('/api/')) {
+    const parts = path.split('/api/');
+    return (parts[1] || '').replace(/^\//, '');
+  }
+  return '';
 }
 
 exports.handler = async (event, context) => {
@@ -127,4 +136,3 @@ exports.handler = async (event, context) => {
     return json(500, { error: 'Internal error', details: err.message });
   }
 };
-
