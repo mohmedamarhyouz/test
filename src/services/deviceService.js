@@ -40,19 +40,55 @@ export async function getPublicIP() {
 
 // Fetch geolocation data based on IP
 export async function getIPGeolocation(ip) {
+    // Try a CORS-friendly provider first, then fall back
     try {
-        const response = await fetch(`https://ipapi.co/${ip}/json/`);
-        const data = await response.json();
-        return {
-            city: data.city,
-            country: data.country_name,
-            latitude: data.latitude,
-            longitude: data.longitude
-        };
-    } catch (error) {
-        console.error('Error fetching IP geolocation:', error);
-        return null;
-    }
+        // ipapi.dev allows CORS for client-side
+        const res1 = await fetch('https://ipapi.dev/json/');
+        if (res1.ok) {
+            const d = await res1.json();
+            return {
+                city: d.city || null,
+                country: d.country_name || d.country || null,
+                latitude: d.latitude || d.lat || null,
+                longitude: d.longitude || d.lon || null
+            };
+        }
+    } catch (_) {}
+
+    try {
+        // ipwho.is is also CORS friendly
+        const res2 = await fetch(`https://ipwho.is/${encodeURIComponent(ip)}`);
+        if (res2.ok) {
+            const d = await res2.json();
+            if (d && d.success !== false) {
+                return {
+                    city: d.city || null,
+                    country: d.country || null,
+                    latitude: d.latitude || null,
+                    longitude: d.longitude || null
+                };
+            }
+        }
+    } catch (_) {}
+
+    // As a last resort (often blocked by CORS), only try on localhost
+    try {
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (isLocalhost) {
+            const response = await fetch(`https://ipapi.co/${ip}/json/`);
+            if (response.ok) {
+                const data = await response.json();
+                return {
+                    city: data.city,
+                    country: data.country_name,
+                    latitude: data.latitude,
+                    longitude: data.longitude
+                };
+            }
+        }
+    } catch (_) {}
+
+    return null;
 }
 
 // Collect user identity info (requires user input)

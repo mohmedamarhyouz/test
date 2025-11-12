@@ -93,19 +93,19 @@ function DeviceInfo() {
             <div className="device-info">
                 <div className="info-item">
                     <label>Operating System:</label>
-                    <value>{deviceInfo.osName}</value>
+                    <span className="value">{deviceInfo.osName}</span>
                 </div>
                 <div className="info-item">
                     <label>Browser:</label>
-                    <value>{deviceInfo.browserName}</value>
+                    <span className="value">{deviceInfo.browserName}</span>
                 </div>
                 <div className="info-item">
                     <label>Screen Resolution:</label>
-                    <value>{deviceInfo.screenResolution}</value>
+                    <span className="value">{deviceInfo.screenResolution}</span>
                 </div>
                 <div className="info-item">
                     <label>Platform:</label>
-                    <value>{deviceInfo.platformInfo}</value>
+                    <span className="value">{deviceInfo.platformInfo}</span>
                 </div>
             </div>
 
@@ -117,4 +117,3 @@ function DeviceInfo() {
 }
 
 export default DeviceInfo;
-
