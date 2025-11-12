@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { collectDeviceData, saveDeviceToDatabase } from '../services/deviceService';
 import './DeviceInfo.css';
 import ConsentBanner from './ConsentBanner';
 
 function DeviceInfo() {
-  const DASHBOARD_URL = import.meta.env?.VITE_DASHBOARD_URL || '';
   const [deviceInfo, setDeviceInfo] = useState({
     deviceName: 'Loading...',
     osName: 'Detecting...',
@@ -164,22 +163,12 @@ function DeviceInfo() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexWrap: 'wrap' }}>
-        <button className="refresh-btn" onClick={() => initializeDeviceInfo(true)}>
-          Refresh Information
-        </button>
-        <a
-          className="refresh-btn"
-          href={DASHBOARD_URL || '/dashboard'}
-          target={DASHBOARD_URL ? '_blank' : '_self'}
-          rel="noopener noreferrer"
-          title={DASHBOARD_URL ? 'Open dashboard' : 'Set VITE_DASHBOARD_URL to override'}
-        >
-          Open Dashboard
-        </a>
-      </div>
+      <button className="refresh-btn" onClick={() => initializeDeviceInfo(true)}>
+        Refresh Information
+      </button>
     </div>
   );
 }
 
 export default DeviceInfo;
+
