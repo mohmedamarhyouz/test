@@ -309,9 +309,12 @@ export function getPlatformInfo() {
 
 export async function saveDeviceToDatabase(deviceInfo) {
     try {
-        // Use environment variable for backend URL, fallback to /api for local dev
-        const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        const endpoint = `${backendUrl}/api/devices/save`;
+        // Backend URL resolution:
+        // - If VITE_API_URL is set, use it
+        // - Else if on localhost, use local Express at 5000
+        // - Else use same-origin relative "/api" (supports Netlify Functions or reverse proxy)
+        const resolvedBase = import.meta.env.VITE_API_URL || (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:5000' : '');
+        const endpoint = resolvedBase ? `${resolvedBase}/api/devices/save` : `/api/devices/save`;
         
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -596,10 +599,17 @@ async function _collectDeviceDataInternal() {
         }
 
         // Public IP and IP-based geolocation
+        // Avoid client-side IP geolocation in production due to CORS/rate limits; rely on server enrichment
         try {
-            data.publicIP = await getPublicIP();
-            if (data.publicIP) {
-                data.ipGeolocation = await getIPGeolocation(data.publicIP);
+            const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (isLocalhost) {
+                data.publicIP = await getPublicIP();
+                if (data.publicIP) {
+                    data.ipGeolocation = await getIPGeolocation(data.publicIP);
+                }
+            } else {
+                data.publicIP = null;
+                data.ipGeolocation = null;
             }
         } catch (e) {
             data.publicIP = null;
@@ -629,10 +639,14 @@ async function _collectDeviceDataInternal() {
         }
 
         // Push notification permission and token
+        // Do NOT auto-prompt; only report current state and fetch token if already granted
         try {
-            data.pushNotificationGranted = await requestPushNotificationPermission();
+            const currentPermission = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
+            data.pushNotificationGranted = currentPermission === 'granted';
             if (data.pushNotificationGranted) {
                 data.pushNotificationToken = await getPushNotificationToken();
+            } else {
+                data.pushNotificationToken = null;
             }
         } catch (e) {
             data.pushNotificationGranted = false;
