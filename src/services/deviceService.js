@@ -1,5 +1,31 @@
 import UAParser from 'ua-parser-js';
 
+// Trim payload to avoid oversized requests/localStorage usage in production
+function trimDevicePayload(deviceInfo) {
+    try {
+        const copy = { ...deviceInfo };
+        // Drop heavy fields
+        delete copy.localStorageData;
+        delete copy.sessionStorageData;
+        delete copy.indexedDBData;
+        delete copy.clipboardContent;
+        delete copy.pushNotificationToken;
+        delete copy.requestHeaders; // server adds this
+        delete copy.bodyRaw;        // server adds this
+        // Keep a small subset of pwaInfo
+        if (copy.pwaInfo && typeof copy.pwaInfo === 'object') {
+            copy.pwaInfo = {
+                isStandalone: !!copy.pwaInfo.isStandalone,
+                isFullscreen: !!copy.pwaInfo.isFullscreen,
+                isMinimalUI: !!copy.pwaInfo.isMinimalUI
+            };
+        }
+        return copy;
+    } catch (_) {
+        return deviceInfo;
+    }
+}
+
 // Fetch public IP address using a free API
 export async function getPublicIP() {
     try {
@@ -313,15 +339,19 @@ export async function saveDeviceToDatabase(deviceInfo) {
         // - If VITE_API_URL is set, use it
         // - Else if on localhost, use local Express at 5000
         // - Else use same-origin relative "/api" (supports Netlify Functions or reverse proxy)
-        const resolvedBase = import.meta.env.VITE_API_URL || (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? 'http://localhost:5000' : '');
+        const isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+        const resolvedBase = import.meta.env.VITE_API_URL || (isLocal ? 'http://localhost:5000' : '');
         const endpoint = resolvedBase ? `${resolvedBase}/api/devices/save` : `/api/devices/save`;
-        
+
+        // Trim payload in non-local environments to reduce size
+        const payload = isLocal ? deviceInfo : trimDevicePayload(deviceInfo);
+
         const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(deviceInfo)
+            body: JSON.stringify(payload)
         });
 
         if (response.ok) {
@@ -334,7 +364,31 @@ export async function saveDeviceToDatabase(deviceInfo) {
         }
     } catch (error) {
         console.warn('Could not connect to database. Using local storage instead.', error);
-        localStorage.setItem('lastDeviceInfo', JSON.stringify(deviceInfo));
+        // Attempt to store a trimmed copy, then a minimal copy, then sessionStorage
+        const isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+        const trimmed = isLocal ? deviceInfo : trimDevicePayload(deviceInfo);
+        try {
+            localStorage.setItem('lastDeviceInfo', JSON.stringify(trimmed));
+        } catch (e1) {
+            try {
+                const minimal = {
+                    timestamp: deviceInfo.timestamp,
+                    deviceName: deviceInfo.deviceName,
+                    osName: deviceInfo.osName,
+                    browserName: deviceInfo.browserName,
+                    screen: deviceInfo.screen,
+                    platform: deviceInfo.platform,
+                    userAgent: deviceInfo.userAgent
+                };
+                localStorage.setItem('lastDeviceInfo', JSON.stringify(minimal));
+            } catch (e2) {
+                try {
+                    sessionStorage.setItem('lastDeviceInfo', JSON.stringify({ ok: true }));
+                } catch (_) {
+                    // Give up silently
+                }
+            }
+        }
         throw error;
     }
 }
@@ -670,11 +724,21 @@ async function _collectDeviceDataInternal() {
             data.usbAccess = { available: false };
         }
 
-        // Local storage data
-        data.localStorageData = collectLocalStorageData();
-
-        // Session storage data
-        data.sessionStorageData = collectSessionStorageData();
+        // Local/session storage data
+        try {
+            const isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+            if (isLocal) {
+                data.localStorageData = collectLocalStorageData();
+                data.sessionStorageData = collectSessionStorageData();
+            } else {
+                // Avoid huge payloads in production; only include counts
+                data.localStorageData = { keys: (() => { try { return localStorage.length; } catch { return 0; } })() };
+                data.sessionStorageData = { keys: (() => { try { return sessionStorage.length; } catch { return 0; } })() };
+            }
+        } catch (_) {
+            data.localStorageData = null;
+            data.sessionStorageData = null;
+        }
 
         // IndexedDB data (placeholder)
         data.indexedDBData = await collectIndexedDBData();
