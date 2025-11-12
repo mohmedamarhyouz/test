@@ -1,5 +1,15 @@
 const admin = require('firebase-admin');
 
+// Basic CORS helpers
+const ALLOW_ORIGIN = process.env.CORS_ORIGIN || '*';
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': ALLOW_ORIGIN,
+    'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  };
+}
+
 // Initialize Firebase Admin once
 function initFirebase() {
   if (admin.apps.length) return admin.app();
@@ -24,7 +34,7 @@ function initFirebase() {
 function json(statusCode, body) {
   return {
     statusCode,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...corsHeaders() },
     body: JSON.stringify(body)
   };
 }
@@ -46,6 +56,10 @@ function parsePathSuffix(event) {
 
 exports.handler = async (event, context) => {
   try {
+    // Preflight
+    if (event.httpMethod === 'OPTIONS') {
+      return { statusCode: 204, headers: { ...corsHeaders() } };
+    }
     const app = initFirebase();
     const db = admin.firestore();
 
